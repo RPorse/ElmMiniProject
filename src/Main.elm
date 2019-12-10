@@ -5,6 +5,14 @@ import Html.Attributes exposing (..)
 import Html.Events exposing(..)
 import Http
 import Json.Decode as Json
+import Material
+import Material.Scheme as Scheme
+import Material.List as Lists
+import Material.Layout as Layout 
+import Material.Button as button
+import Material.Textfield as Textfield 
+import Material.Color as Color 
+import Material.Options as Options exposing (css)
 
 
 --Model
@@ -23,7 +31,7 @@ type alias Gamer =
     , score : Int
     }
 
-init : ( Model, cmd Msg)
+init : ( Model, Cmd Msg)
 init =
     ( Model (GamerList "Gamers!") [], Cmd.none )
 
@@ -41,15 +49,15 @@ update msg model =
             OpenGamer   (Ok json) -> 
                         ({model | gamers = json}, Cmd.none)                
         
-            OpenGamer   (Err e) -> 
-                        (Debug.log (toString e) model, Cmd.none)
+  --          OpenGamer   (Err e) -> 
+ --                       (Debug.log (toString e) model, Cmd.none)
             GetGamer    ->
-                        (model, getInfo model.GamerList.name)
+                        (model, getInfo model.gamerList.name)
 
             UpdateGamer string ->
-                        ({model | gamerlist = (updateSElection string)}, Cmd.none)
+                        ({model | gamerlist = (updateSelection string)}, Cmd.none)
 
-updateSelection : String -> Subreddit
+updateSelection : String -> GamerList
 updateSelection string =
     GamerList string
                 
@@ -64,14 +72,14 @@ view model =
             , button [onClick GetGamer][ text "Go!"]
             , h3 [] [ text model.gamerlist.name ]
             , h3 [] [text <| "http://localhost:8000/" ++ model.gamerlist.name]
-            , div [] <| List.map postView model.gamers
+            , div [] <| List.map gamerView model.gamers
             ]
         ]
 
-gamerView : Post -> Html Msg
-gamerView post =
+gamerView : Gamer -> Html Msg
+gamerView gamer =
     div []
-        [ a [ href post.url] [ text gamer.nickname]
+        [ a [ href gamer.url] [ text gamer.nickname]
         ]
 
         
@@ -101,9 +109,9 @@ decodeHost : Json.Decoder (List Gamer)
 decodeHost =
     Json.at [ "data", "children"] (Json.list decodeGamer)
 
-decodeGamer : Json.Decoder Post
+decodeGamer : Json.Decoder Gamer
 decodeGamer =
-    Json.map3 Post
+    Json.map3 Gamer
         (Json.at ["data", "ID"] Json.int)
         (Json.at ["data", "Nickname"] Json.string)
         (Json.at ["data", "Score"] Json.int)
