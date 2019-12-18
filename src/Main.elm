@@ -60,7 +60,7 @@ init _ =
 type Msg
     = MorePlease
     | SingleGamerButton
-    {--| DeleteGamer --}
+    | DeleteGamer
     | GetAllGamersButton
     | GotGamer (Result Http.Error Gamer)
     | GotAllGamerList (Result Http.Error (List Gamer))
@@ -75,8 +75,8 @@ update msg model =
         SingleGamerButton ->
             ( Loading, getSingleGamer )
 
-       {-- DeleteGamer ->
-            ( Loading, deleteGamer ) --}
+        DeleteGamer ->
+            ( Loading, deleteGamer )
 
         GetAllGamersButton ->
             ( Loading, getAllGamers )
@@ -126,14 +126,12 @@ searchGamer model =
     div []
         [ h5 [] [ text "Get gamerlist: " ]
         , button [ onClick GetAllGamersButton ] [ text "Show list!" ]
-       {--
         , hr [] []
         , h5 [] [ text "Show or remove gamer: " ]
         , input [ type_ "text", placeholder "Search by id" ] []
         , br [] []
         , button [ onClick SingleGamerButton ] [ text "Get gamer!" ]
         , button [ onClick DeleteGamer ] [ text "Remove gamer!" ]
-        --}
         , hr [] []
         , h5 [] [ text "Create a new gamer here: " ]
         , input [ type_ "text", placeholder "nickname" ] []
@@ -197,7 +195,6 @@ showGamer gamer =
 
 -- HTTP
 
-{--
 deleteGamer : Cmd Msg
 deleteGamer =
     Http.request
@@ -209,7 +206,6 @@ deleteGamer =
         , timeout = Nothing
         , tracker = Nothing
         }
---}
 
 getSingleGamer : Cmd Msg
 getSingleGamer =
