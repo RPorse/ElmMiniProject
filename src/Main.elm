@@ -23,10 +23,9 @@ main =
 
 type alias Gamer =
     { id : Int
-    , name : String
+    , nickname : String
     , score : Int
     }
-
 
 
 -- Gamers
@@ -61,7 +60,7 @@ init _ =
 type Msg
     = MorePlease
     | SingleGamerButton
-    | DeleteGamer
+    {--| DeleteGamer --}
     | GetAllGamersButton
     | GotGamer (Result Http.Error Gamer)
     | GotAllGamerList (Result Http.Error (List Gamer))
@@ -76,8 +75,8 @@ update msg model =
         SingleGamerButton ->
             ( Loading, getSingleGamer )
 
-        DeleteGamer ->
-            ( Loading, deleteGamer )
+       {-- DeleteGamer ->
+            ( Loading, deleteGamer ) --}
 
         GetAllGamersButton ->
             ( Loading, getAllGamers )
@@ -127,12 +126,14 @@ searchGamer model =
     div []
         [ h5 [] [ text "Get gamerlist: " ]
         , button [ onClick GetAllGamersButton ] [ text "Show list!" ]
+       {--
         , hr [] []
         , h5 [] [ text "Show or remove gamer: " ]
         , input [ type_ "text", placeholder "Search by id" ] []
         , br [] []
         , button [ onClick SingleGamerButton ] [ text "Get gamer!" ]
         , button [ onClick DeleteGamer ] [ text "Remove gamer!" ]
+        --}
         , hr [] []
         , h5 [] [ text "Create a new gamer here: " ]
         , input [ type_ "text", placeholder "nickname" ] []
@@ -161,12 +162,12 @@ viewTable model =
                 , table []
                     [ tr []
                         [ th [] [ text "id " ]
-                        , th [] [ text "name " ]
+                        , th [] [ text "nickname " ]
                         , th [] [ text "score " ]
                         ]
                     , tr []
                         [ td [] [ text (String.fromInt gamer.id) ]
-                        , td [] [ text gamer.name ]
+                        , td [] [ text gamer.nickname ]
                         , td [] [ text (String.fromInt gamer.score) ]
                         ]
                     ]
@@ -176,7 +177,7 @@ viewTable model =
             table []
                 ([ tr []
                     [ th [] [ text "Id" ]
-                    , th [] [ text "Name" ]
+                    , th [] [ text "Nickname" ]
                     , th [] [ text "Score" ]
                     ]
                  ]
@@ -188,7 +189,7 @@ showGamer : Gamer -> Html Msg
 showGamer gamer =
     tr []
         [ td [] [ text (String.fromInt gamer.id) ]
-        , td [] [ text gamer.name ]
+        , td [] [ text gamer.nickname ]
         , td [] [ text (String.fromInt gamer.score) ]
         ]
 
@@ -196,7 +197,7 @@ showGamer gamer =
 
 -- HTTP
 
-
+{--
 deleteGamer : Cmd Msg
 deleteGamer =
     Http.request
@@ -208,7 +209,7 @@ deleteGamer =
         , timeout = Nothing
         , tracker = Nothing
         }
-
+--}
 
 getSingleGamer : Cmd Msg
 getSingleGamer =
@@ -232,7 +233,7 @@ getAllGamers =
 
 gamerDecoder : Decoder Gamer
 gamerDecoder =
-    map3 Gamer (field "id" int) (field "name" string) (field "score" int)
+    map3 Gamer (field "id" int) (field "nickname" string) (field "score" int)
 
 
 gamerListDecoder : Decoder (List Gamer)
@@ -242,4 +243,4 @@ gamerListDecoder =
 
 msgDecoder : Decoder String
 msgDecoder =
-    field "name" string
+    field "nickname" string
