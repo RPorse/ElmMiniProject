@@ -1,125 +1,245 @@
 module Main exposing (..)
 
+import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing(..)
+import Html.Events exposing (..)
 import Http
-import Json.Decode as Json
-import Material
-import Material.Scheme as Scheme
-import Material.List as Lists
-import Material.Layout as Layout 
-import Material.Button as button
-import Material.Textfield as Textfield 
-import Material.Color as Color 
-import Material.Options as Options exposing (css)
+import Json.Decode as JD exposing (Decoder, field, int, map3, string)
 
 
---Model
+main =
+    Browser.element
+        { init = init
+        , update = update
+        , subscriptions = subscriptions
+        , view = view
+        }
 
-type alias Model =
-    { gamerList : GamerList
-    , gamers : List Gamer
-    }
 
-type alias GamerList =
-    { name : String }
+
+-- Gamer
+
 
 type alias Gamer =
     { id : Int
-    , nickname : String 
+    , name : String
     , score : Int
     }
 
-init : ( Model, Cmd Msg)
-init =
-    ( Model (GamerList "Gamers!") [], Cmd.none )
 
 
---Update
+-- Gamers
 
-type Msg   
-    = OpenGamer (Result Http.Error (List Gamer))
-    | GetGamer
-    | UpdateGamer String
 
-update : Msg -> Model -> (Model, Cmd Msg)
-update msg model = 
-        case msg of
-            OpenGamer   (Ok json) -> 
-                        ({model | gamers = json}, Cmd.none)                
-        
-  --          OpenGamer   (Err e) -> 
- --                       (Debug.log (toString e) model, Cmd.none)
-            GetGamer    ->
-                        (model, getInfo model.gamerList.name)
+type alias ListModel =
+    { gamerList : List Gamer
+    , msg : String
+    }
 
-            UpdateGamer string ->
-                        ({model | gamerlist = (updateSelection string)}, Cmd.none)
 
-updateSelection : String -> GamerList
-updateSelection string =
-    GamerList string
-                
-        
 
---View
-view : Model -> Html Msg
-view model =
-    div []
-        [div[]
-            [ input [ type_ "text", placeholder "Gamerlist", onInput UpdateGamer][]
-            , button [onClick GetGamer][ text "Go!"]
-            , h3 [] [ text model.gamerlist.name ]
-            , h3 [] [text <| "http://localhost:8000/" ++ model.gamerlist.name]
-            , div [] <| List.map gamerView model.gamers
-            ]
-        ]
+-- Model
 
-gamerView : Gamer -> Html Msg
-gamerView gamer =
-    div []
-        [ a [ href gamer.url] [ text gamer.nickname]
-        ]
 
-        
---Subscription
+type Model
+    = Failure
+    | Loading
+    | Success Gamer
+    | SuccessAll (List Gamer)
+
+
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( Loading, getSingleGamer )
+
+
+
+-- Update
+
+
+type Msg
+    = MorePlease
+    | SingleGamerButton
+    | DeleteGamer
+    | GetAllGamersButton
+    | GotGamer (Result Http.Error Gamer)
+    | GotAllGamerList (Result Http.Error (List Gamer))
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        MorePlease ->
+            ( Loading, getSingleGamer )
+
+        SingleGamerButton ->
+            ( Loading, getSingleGamer )
+
+        DeleteGamer ->
+            ( Loading, deleteGamer )
+
+        GetAllGamersButton ->
+            ( Loading, getAllGamers )
+
+        GotGamer result ->
+            case result of
+                Ok url ->
+                    ( Success url, Cmd.none )
+
+                Err _ ->
+                    ( Failure, Cmd.none )
+
+        GotAllGamerList result ->
+            case result of
+                Ok url ->
+                    ( SuccessAll url, Cmd.none )
+
+                Err _ ->
+                    ( Failure, Cmd.none )
+
+
+
+-- Subscriptions
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
 
---Commands
 
-getInfo : String -> Cmd Msg
-getInfo string =
-    let
-        url =
-            "http://localhost:8000/" ++ string ++ "/.json"
-        
-        req =
-            Http.get url decodeLocalhost --????
-    
-    in
-        Http.send OpenGamer req
 
---Json
+-- View
 
-decodeHost : Json.Decoder (List Gamer)
-decodeHost =
-    Json.at [ "data", "children"] (Json.list decodeGamer)
 
-decodeGamer : Json.Decoder Gamer
-decodeGamer =
-    Json.map3 Gamer
-        (Json.at ["data", "ID"] Json.int)
-        (Json.at ["data", "Nickname"] Json.string)
-        (Json.at ["data", "Score"] Json.int)
+view : Model -> Html Msg
+view model =
+    div []
+        [ h1 [] [ text "Gamer configuration" ]
+        , hr [] []
+        , searchGamer model
+        , viewTable model
+        ]
 
-main =
-    Html.program
-        { init = init
-        , update = update
-        , view = view
-        ,subscriptions = subscriptions
+
+searchGamer : Model -> Html Msg
+searchGamer model =
+    div []
+        [ h5 [] [ text "Get gamerlist: " ]
+        , button [ onClick GetAllGamersButton ] [ text "Show list!" ]
+        , hr [] []
+        , h5 [] [ text "Show or remove gamer: " ]
+        , input [ type_ "text", placeholder "Search by id" ] []
+        , br [] []
+        , button [ onClick SingleGamerButton ] [ text "Get gamer!" ]
+        , button [ onClick DeleteGamer ] [ text "Remove gamer!" ]
+        , hr [] []
+        , h5 [] [ text "Create a new gamer here: " ]
+        , input [ type_ "text", placeholder "nickname" ] []
+        , input [ type_ "text", placeholder "score" ] []
+        , br [] []
+        , button [ onClick MorePlease ] [ text "Create gamer!" ]
+        , hr [] []
+        ]
+
+
+viewTable : Model -> Html Msg
+viewTable model =
+    case model of
+        Failure ->
+            div []
+                [ text "No gamers found "
+                , button [ onClick MorePlease ] [ text "Try again?" ]
+                ]
+
+        Loading ->
+            text "Loading..."
+
+        Success gamer ->
+            div []
+                [ h3 [] [ text "List of gamers" ]
+                , table []
+                    [ tr []
+                        [ th [] [ text "id " ]
+                        , th [] [ text "name " ]
+                        , th [] [ text "score " ]
+                        ]
+                    , tr []
+                        [ td [] [ text (String.fromInt gamer.id) ]
+                        , td [] [ text gamer.name ]
+                        , td [] [ text (String.fromInt gamer.score) ]
+                        ]
+                    ]
+                ]
+
+        SuccessAll list ->
+            table []
+                ([ tr []
+                    [ th [] [ text "Id" ]
+                    , th [] [ text "Name" ]
+                    , th [] [ text "Score" ]
+                    ]
+                 ]
+                    ++ List.map showGamer list
+                )
+
+
+showGamer : Gamer -> Html Msg
+showGamer gamer =
+    tr []
+        [ td [] [ text (String.fromInt gamer.id) ]
+        , td [] [ text gamer.name ]
+        , td [] [ text (String.fromInt gamer.score) ]
+        ]
+
+
+
+-- HTTP
+
+
+deleteGamer : Cmd Msg
+deleteGamer =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = "http://localhost:4711/gamer/4"
+        , body = Http.emptyBody
+        , expect = Http.expectJson GotGamer gamerDecoder
+        , timeout = Nothing
+        , tracker = Nothing
         }
+
+
+getSingleGamer : Cmd Msg
+getSingleGamer =
+    Http.get
+        { url = "http://localhost:4711/gamer/1"
+        , expect = Http.expectJson GotGamer gamerDecoder
+        }
+
+
+getAllGamers : Cmd Msg
+getAllGamers =
+    Http.get
+        { url = "http://localhost:4711/gamer/"
+        , expect = Http.expectJson GotAllGamerList gamerListDecoder
+        }
+
+
+
+-- JSON Decoders
+
+
+gamerDecoder : Decoder Gamer
+gamerDecoder =
+    map3 Gamer (field "id" int) (field "name" string) (field "score" int)
+
+
+gamerListDecoder : Decoder (List Gamer)
+gamerListDecoder =
+    JD.list gamerDecoder
+
+
+msgDecoder : Decoder String
+msgDecoder =
+    field "name" string
